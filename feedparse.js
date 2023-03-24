@@ -11,65 +11,67 @@ module.exports = function(RED) {
         var node = this;
         this.seen = {};
         var parsedUrl = url.parse(this.url);
-        if (!(parsedUrl.host || (parsedUrl.hostname && parsedUrl.port)) && !parsedUrl.isUnix) {
-            this.error(RED._("feedparse-extended.errors.invalidurl"));
-        }
+//         if (!(parsedUrl.host || (parsedUrl.hostname && parsedUrl.port)) && !parsedUrl.isUnix) {
+//             this.error(RED._("feedparse-extended.errors.invalidurl"));
+//         }
 //         else {
-            getFeed = function(msg) {
-                var feed_url;
-                if(msg.payload != null){
-                    feed_url = msg.payload;
-                } else {
-                    feed_url = node.url;
-                }
-                
-                msg.topic   = {};
-                msg.payload = {};
-                msg.article = {};
-                
-                var req = request(feed_url, {timeout:10000, pool:false});
-                //req.setMaxListeners(50);
-                req.setHeader('user-agent', 'Mozilla/5.0 (Node-RED)');
-                req.setHeader('accept', 'text/html,application/xhtml+xml');
+        this.on("input", function(msg) {
+        
+//         var getFeed = function(msg) {
+            var feed_url;
+            if(msg.payload != null){
+                feed_url = msg.payload;
+            } else {
+                feed_url = node.url;
+            }
 
-                var feedparser = new FeedParser();
+            msg.topic   = {};
+            msg.payload = {};
+            msg.article = {};
 
-                req.on('error', function(err) { node.error(err); node.send(msg) });
+            var req = request(feed_url, {timeout:10000, pool:false});
+            //req.setMaxListeners(50);
+            req.setHeader('user-agent', 'Mozilla/5.0 (Node-RED)');
+            req.setHeader('accept', 'text/html,application/xhtml+xml');
 
-                req.on('response', function(res) {
-                    if (res.statusCode != 200) { node.warn(RED._("feedparse-extended.errors.badstatuscode")+" "+res.statusCode); node.send(msg); }
-                    else { res.pipe(feedparser); }
-                });
+            var feedparser = new FeedParser();
 
-                feedparser.on('error', function(error) { node.error(error); });
+            req.on('error', function(err) { node.error(err); node.send(msg) });
 
-                feedparser.on('readable', function () {
-                    var stream = this, article;
-                    var sent = false;
-                    
-                    while (article = stream.read()) {  // jshint ignore:line
+            req.on('response', function(res) {
+                if (res.statusCode != 200) { node.warn(RED._("feedparse-extended.errors.badstatuscode")+" "+res.statusCode); node.send(msg); }
+                else { res.pipe(feedparser); }
+            });
+
+            feedparser.on('error', function(error) { node.error(error); });
+
+            feedparser.on('readable', function () {
+                var stream = this, article;
+                var sent = false;
+
+                while (article = stream.read()) {  // jshint ignore:line
 //                         if (!(article.guid in node.seen) || ( node.seen[article.guid] !== 0 && node.seen[article.guid] != article.date.getTime())) {
-                            node.seen[article.guid] = article.date?article.date.getTime():0;
-                            
-                            msg.topic = article.origlink || article.link
-                            msg.payload = article.description
-                            msg.article = article
-                        
-                            sent = true;
-                            node.send(msg);
-//                         }
-                    }
-                    if (! sent ) { node.send(msg); };
-                });
+                        node.seen[article.guid] = article.date?article.date.getTime():0;
 
-                feedparser.on('meta', function (meta) {});
-                feedparser.on('end', function () {});
-            };
+                        msg.topic = article.origlink || article.link
+                        msg.payload = article.description
+                        msg.article = article
+
+                        sent = true;
+                        node.send(msg);
+//                         }
+                }
+                if (! sent ) { node.send(msg); };
+            });
+
+            feedparser.on('meta', function (meta) {});
+            feedparser.on('end', function () {});
+        };
 //         }
 
-        this.on("input", function(msg) {
-            getFeed(msg);
-        });
+//         this.on("input", function(msg) {
+//             getFeed(msg);
+//         });
     }
 
     RED.nodes.registerType("feedparse-extended",FeedParseNode);
