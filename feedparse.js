@@ -4,7 +4,7 @@ module.exports = function(RED) {
     var FeedParser = require("feedparser");
     var request = require("request");
     var url = require('url');
-    var getFeed = function();
+    var getFeed = function() {} ;
     
     function FeedParseNode(n) {
         RED.nodes.createNode(this,n);
