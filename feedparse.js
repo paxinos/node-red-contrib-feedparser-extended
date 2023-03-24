@@ -65,7 +65,7 @@ module.exports = function (RED) {
 
             feedparser.on('meta', function (meta) { });
             feedparser.on('end', function () { });
-        };
+        });
     };
 
     //         this.on("input", function(msg) {
