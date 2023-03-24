@@ -4,7 +4,7 @@ module.exports = function(RED) {
     var FeedParser = require("feedparser");
     var request = require("request");
     var url = require('url');
-    var getFeed = function() {} ;
+    var getFeed;
     
     function FeedParseNode(n) {
         RED.nodes.createNode(this,n);
@@ -23,6 +23,11 @@ module.exports = function(RED) {
                 } else {
                     feed_url = node.url;
                 }
+                
+                msg.topic   = {};
+                msg.payload = {};
+                msg.article = {};
+                
                 var req = request(feed_url, {timeout:10000, pool:false});
                 //req.setMaxListeners(50);
                 req.setHeader('user-agent', 'Mozilla/5.0 (Node-RED)');
@@ -30,10 +35,10 @@ module.exports = function(RED) {
 
                 var feedparser = new FeedParser();
 
-                req.on('error', function(err) { node.error(err); });
+                req.on('error', function(err) { node.error(err); node.send(msg) });
 
                 req.on('response', function(res) {
-                    if (res.statusCode != 200) { node.warn(RED._("feedparse-extended.errors.badstatuscode")+" "+res.statusCode); }
+                    if (res.statusCode != 200) { node.warn(RED._("feedparse-extended.errors.badstatuscode")+" "+res.statusCode); node.send(msg); }
                     else { res.pipe(feedparser); }
                 });
 
@@ -41,17 +46,21 @@ module.exports = function(RED) {
 
                 feedparser.on('readable', function () {
                     var stream = this, article;
+                    var sent = false;
+                    
                     while (article = stream.read()) {  // jshint ignore:line
-                        if (!(article.guid in node.seen) || ( node.seen[article.guid] !== 0 && node.seen[article.guid] != article.date.getTime())) {
+//                         if (!(article.guid in node.seen) || ( node.seen[article.guid] !== 0 && node.seen[article.guid] != article.date.getTime())) {
                             node.seen[article.guid] = article.date?article.date.getTime():0;
                             
                             msg.topic = article.origlink || article.link
                             msg.payload = article.description
                             msg.article = article
-                            
+                        
+                            sent = true;
                             node.send(msg);
-                        }
+//                         }
                     }
+                    if (! sent ) { node.send(msg); };
                 });
 
                 feedparser.on('meta', function (meta) {});
