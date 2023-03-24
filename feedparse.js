@@ -4,7 +4,8 @@ module.exports = function(RED) {
     var FeedParser = require("feedparser");
     var request = require("request");
     var url = require('url');
-
+    var getFeed = function();
+    
     function FeedParseNode(n) {
         RED.nodes.createNode(this,n);
         this.url = n.url;
@@ -15,7 +16,7 @@ module.exports = function(RED) {
             this.error(RED._("feedparse-extended.errors.invalidurl"));
         }
         else {
-            var getFeed = function(msg) {
+            getFeed = function(msg) {
                 var feed_url;
                 if(msg.payload != null){
                     feed_url = msg.payload;
